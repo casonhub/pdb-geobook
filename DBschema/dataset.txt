@@ -1,0 +1,313 @@
+-- BOOKS
+INSERT INTO books (book_id, title, author, isbn) VALUES 
+(1, 'Geografie České republiky', 'Petr Chalupa, Jana Nováková', '978-80-86034-87-5'),
+(2, 'Historické památky Čech', 'Karel Černý, Marie Svobodová', '978-80-7393-122-6'),
+(3, 'Přírodní krásy Moravy', 'Jan Procházka, Eva Králová', '978-80-87164-33-8'),
+(4, 'Technické památky České republiky', 'Tomáš Beran, Alena Veselá', '978-80-86874-55-9');
+
+-- CHAPTERS for Book 1: Geografie České republiky
+INSERT INTO chapters (chapter_id, book_id, chapter_number, title, location_description) VALUES 
+(1, 1, 1, 'Hlavní město Praha', 'Geografická charakteristika Prahy, její poloha, vodstvo a urbanistický vývoj'),
+(2, 1, 2, 'České středohoří', 'Pohoří s vulkanickou minulostí, významné vrcholy a říční systémy'),
+(3, 1, 3, 'Šumava a Pošumaví', 'Nejrozsáhlejší pohoří v ČR, národní park a chráněné krajinné oblasti'),
+(4, 1, 4, 'Moravský kras', 'Krasová oblast s jeskynními systémy a propastí Macochou'),
+(5, 1, 5, 'Českomoravská vrchovina', 'Rozsáhlé pohoří na hranici Čech a Moravy s charakteristickým reliéfem');
+
+-- CHAPTERS for Book 2: Historické památky Čech
+INSERT INTO chapters (chapter_id, book_id, chapter_number, title, location_description) VALUES 
+(6, 2, 1, 'Pražské hrady a zámky', 'Historické sídla v hlavním městě včetně Pražského hradu a dalších'),
+(7, 2, 2, 'Gotické památky Středních Čech', 'Středověké hrady a kostely v oblasti kolem Prahy'),
+(8, 2, 3, 'Barokní perly Jižních Čech', 'Barokní architektura v Českém Krumlově a okolí'),
+(9, 2, 4, 'Západočeské lázně', 'Historické lázeňské města a jejich architektonické skvosty');
+
+-- LOCATIONS for Chapter 1: Hlavní město Praha
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(1, 1, 50.090000, 14.400000, 'Pražský hrad', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.090000, 14.400000, NULL), NULL, NULL)),
+(2, 1, 50.086500, 14.411000, 'Karlův most', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.086500, 14.411000, NULL), NULL, NULL)),
+(3, 1, 50.083000, 14.417000, 'Staroměstské náměstí', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.083000, 14.417000, NULL), NULL, NULL)),
+(4, 1, 50.096000, 14.435000, 'Vítkov - Národní památník', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.096000, 14.435000, NULL), NULL, NULL)),
+(5, 1, 50.067000, 14.417000, 'Vyšehrad', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.067000, 14.417000, NULL), NULL, NULL));
+
+-- LOCATIONS for Chapter 2: České středohoří
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(6, 2, 50.516667, 14.150000, 'Milešovka', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.516667, 14.150000, NULL), NULL, NULL)),
+(7, 2, 50.533333, 14.100000, 'Lovoš', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.533333, 14.100000, NULL), NULL, NULL)),
+(8, 2, 50.535000, 14.052000, 'Opárenské údolí', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.535000, 14.052000, NULL), NULL, NULL)),
+(9, 2, 50.600000, 14.183333, 'Házmburk', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.600000, 14.183333, NULL), NULL, NULL));
+
+-- LOCATIONS for Chapter 3: Šumava a Pošumaví
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(10, 3, 49.168333, 13.555833, 'Plechý', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.168333, 13.555833, NULL), NULL, NULL)),
+(11, 3, 49.059444, 13.491389, 'Boubín', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.059444, 13.491389, NULL), NULL, NULL)),
+(12, 3, 49.116667, 13.483333, 'Boubínský prales', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.116667, 13.483333, NULL), NULL, NULL)),
+(13, 3, 48.983333, 13.533333, 'Černé jezero', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(48.983333, 13.533333, NULL), NULL, NULL)),
+(14, 3, 49.033333, 13.466667, 'Čertovo jezero', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.033333, 13.466667, NULL), NULL, NULL));
+
+-- LOCATIONS for Chapter 4: Moravský kras
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(15, 4, 49.364167, 16.726111, 'Propast Macocha', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.364167, 16.726111, NULL), NULL, NULL)),
+(16, 4, 49.370833, 16.700000, 'Punkevní jeskyně', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.370833, 16.700000, NULL), NULL, NULL)),
+(17, 4, 49.358333, 16.745833, 'Kateřinská jeskyně', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.358333, 16.745833, NULL), NULL, NULL)),
+(18, 4, 49.383333, 16.666667, 'Sloupsko-šošůvské jeskyně', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.383333, 16.666667, NULL), NULL, NULL));
+
+-- LOCATIONS for Chapter 6: Pražské hrady a zámky
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(19, 6, 50.091111, 14.401389, 'Královský palác', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.091111, 14.401389, NULL), NULL, NULL)),
+(20, 6, 50.090000, 14.400000, 'Katedrála sv. Víta', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.090000, 14.400000, NULL), NULL, NULL)),
+(21, 6, 50.093889, 14.413333, 'Valdštejnský palác', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.093889, 14.413333, NULL), NULL, NULL)),
+(22, 6, 50.094167, 14.420278, 'Černínský palác', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.094167, 14.420278, NULL), NULL, NULL));
+
+
+-- Additional locations for other chapters
+INSERT INTO locations (location_id, chapter_id, latitude, longitude, place_name, spatial_data) VALUES 
+(23, 7, 49.800000, 14.700000, 'Hrad Karlštejn', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.800000, 14.700000, NULL), NULL, NULL)),
+(24, 7, 49.950000, 14.200000, 'Hrad Křivoklát', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.950000, 14.200000, NULL), NULL, NULL)),
+(25, 8, 48.810556, 14.315278, 'Zámek Český Krumlov', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(48.810556, 14.315278, NULL), NULL, NULL)),
+(26, 9, 50.229444, 12.871111, 'Lázně Karlovy Vary', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.229444, 12.871111, NULL), NULL, NULL)),
+(27, 9, 50.161111, 12.404722, 'Lázně Mariánské Lázně', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(50.161111, 12.404722, NULL), NULL, NULL)),
+(28, 5, 49.566667, 16.066667, 'Žďárské vrchy', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.566667, 16.066667, NULL), NULL, NULL)),
+(29, 5, 49.683333, 15.866667, 'Železné hory', SDO_GEOMETRY(2001, 4326, SDO_POINT_TYPE(49.683333, 15.866667, NULL), NULL, NULL));
+
+
+
+
+-- MULTIMEDIA entries for sample locations
+CREATE OR REPLACE PROCEDURE insert_images_with_multimedia_types AS
+    img ORDSYS.ORDImage;
+    img_si ORDSYS.SI_StillImage;
+    img_ac ORDSYS.SI_AverageColor;
+    img_pc ORDSYS.SI_PositionalColor;
+    img_ch ORDSYS.SI_ColorHistogram;
+    ctx RAW(64) := NULL;
+BEGIN
+    -- Image 1: Prague Castle - main view
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        1, 1, 'image', '/images/prague_castle_01.jpg',
+        'Celkový pohled na Pražský hrad od řeky Vltavy',
+        '/thumbnails/prague_castle_01_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 2: Prague Castle - night view
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        2, 1, 'image', '/images/prague_castle_02.jpg',
+        'Noční osvětlení Pražského hradu',
+        '/thumbnails/prague_castle_02_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 3: Charles Bridge
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        3, 2, 'image', '/images/charles_bridge_01.jpg',
+        'Karlův most se sochami v ranní mlze',
+        '/thumbnails/charles_bridge_01_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 4: Macocha Abyss
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        4, 15, 'image', '/images/macocha_01.jpg',
+        'Pohled do propasti Macocha z horního můstku',
+        '/thumbnails/macocha_01_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 5: Plechy Mountain
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        5, 10, 'image', '/images/plechy_01.jpg',
+        'Vrchol Plechého s výhledem na šumavské lesy',
+        '/thumbnails/plechy_01_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 6: Old Town Square
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        6, 3, 'image', '/images/old_town_square.jpg',
+        'Staroměstské náměstí s orlojem a historickými domy',
+        '/thumbnails/old_town_square_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 7: Milešovka Mountain
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        7, 6, 'image', '/images/milesovka_summit.jpg',
+        'Vrchol Milešovky - nejvyšší hory Českého středohoří',
+        '/thumbnails/milesovka_summit_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 8: Karlštejn Castle
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        8, 23, 'image', '/images/karlstejn_castle.jpg',
+        'Gotický hrad Karlštejn nad řekou Berounkou',
+        '/thumbnails/karlstejn_castle_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 9: Český Krumlov Castle
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        9, 25, 'image', '/images/cesky_krumlov_castle.jpg',
+        'Zámek Český Krumlov - renesanční perla Jižních Čech',
+        '/thumbnails/cesky_krumlov_castle_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 10: Karlovy Vary Spa
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        10, 26, 'image', '/images/karlovy_vary_spa.jpg',
+        'Lázeňská kolonáda v Karlových Varech',
+        '/thumbnails/karlovy_vary_spa_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 11: Boubín Forest
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        11, 12, 'image', '/images/boubin_forest.jpg',
+        'Boubínský prales - pralesovitý porost v srdci Šumavy',
+        '/thumbnails/boubin_forest_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    -- Image 12: St. Vitus Cathedral
+    INSERT INTO multimedia (
+        multimedia_id, location_id, file_type, file_path, description,
+        thumbnail_path, image, image_si, image_ac, image_pc, image_ch
+    ) VALUES (
+        12, 20, 'image', '/images/st_vitus_cathedral.jpg',
+        'Gotická katedrála sv. Víta - dominanta Pražského hradu',
+        '/thumbnails/st_vitus_cathedral_thumb.jpg',
+        ORDSYS.ORDImage.init(),
+        ORDSYS.SI_StillImage.init(),
+        ORDSYS.SI_AverageColor.init(),
+        ORDSYS.SI_PositionalColor.init(),
+        ORDSYS.SI_ColorHistogram.init()
+    )
+    RETURNING image, image_si, image_ac, image_pc, image_ch 
+    INTO img, img_si, img_ac, img_pc, img_ch;
+    
+    img.setProperties();
+
+    DBMS_OUTPUT.PUT_LINE('Successfully inserted 12 image records with Oracle multimedia types');
+    COMMIT;
+END;
