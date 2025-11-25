@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>GeoBook - Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">GeoBook</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/books">Books</a>
+                <a class="nav-link" href="/map">Map</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4" th:text="${message}">Welcome to GeoBook</h1>
+            <p class="lead">Explore geographical locations mentioned in your favorite books!</p>
+            <hr class="my-4">
+            <p>Navigate through books and visualize locations on an interactive map.</p>
+            <a class="btn btn-primary btn-lg" href="/books" role="button">View Books</a>
+            <a class="btn btn-secondary btn-lg" href="/map" role="button">View Map</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
