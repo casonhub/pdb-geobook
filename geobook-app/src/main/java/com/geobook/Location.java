@@ -1,7 +1,7 @@
 package com.geobook;
 
-import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
