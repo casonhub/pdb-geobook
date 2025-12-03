@@ -23,30 +23,30 @@ Multimedia content (imagess, metadata) can also be linked to each location.
 ---
 
 # 📁 Project Structure
-GeoBook/
-│
-├── source/geobook-app/ # Spring Boot REST API
-│ ├── src/main/
-│ │ └── java/com/geobook/
-│ │ ├── controller/ # REST controllers
-│ │ ├── model/ # JPA entities
-│ │ ├── repository/ # Spring Data JPA repositories
-│ │ └── service/ # Business logic
-│ │
-│ ├── src/main/resources/
-│ │ ├── static/
-│ │ │ ├── css/
-│ │ │ ├── js/
-│ │ │
-│ │ ├── templates/
-│ │ │ └── html/ # Frontend pages
-│ │ │
-│ │ ├── data.sql # Initial data (optional)
-│ │ ├── application.properties
-│ │ ├── application-prod.properties
-│ │
-│ ├── pom.xml # Maven build file
-│ └── README.md
+    GeoBook/
+    │
+    ├── source/geobook-app/ # Spring Boot REST API
+    │ ├── src/main/
+    │ │ └── java/com/geobook/
+    │ │ ├── controller/ # REST controllers
+    │ │ ├── model/ # JPA entities
+    │ │ ├── repository/ # Spring Data JPA repositories
+    │ │ └── service/ # Business logic
+    │ │
+    │ ├── src/main/resources/
+    │ │ ├── static/
+    │ │ │ ├── css/
+    │ │ │ ├── js/
+    │ │ │
+    │ │ ├── templates/
+    │ │ │ └── html/ # Frontend pages
+    │ │ │
+    │ │ ├── data.sql # Initial data (optional)
+    │ │ ├── application.properties
+    │ │ ├── application-prod.properties
+    │ │
+    │ ├── pom.xml # Maven build file
+    │ └── README.md
 
 
 

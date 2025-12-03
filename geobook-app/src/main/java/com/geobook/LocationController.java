@@ -13,8 +13,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/locations")
 public class LocationController {
 
-    private static final Logger logger = LoggerFactory.getLogger(LocationController.class);
-
     @Autowired
     private LocationRepository locationRepository;
     
@@ -26,11 +24,8 @@ public class LocationController {
 
     @GetMapping
     public String listLocations(Model model) {
-        logger.info("listLocations called");
         List<Location> locations = locationRepository.findAll();
-        List<LocationDto> locationDtos = locations.stream().map(LocationDto::from).collect(Collectors.toList());
-        logger.info("Found {} locations, converted to {} DTOs", locations.size(), locationDtos.size());
-        model.addAttribute("locations", locationDtos);
+        model.addAttribute("locations", locations.stream().map(LocationDto::from).collect(Collectors.toList()));
         return "locations";
     }
 

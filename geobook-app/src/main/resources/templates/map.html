@@ -22,9 +22,38 @@
     </nav>
     <div class="container mt-4">
         <h1 class="mb-4">Locations Map</h1>
-        <div class="card">
-            <div class="card-body">
-                <div id="map" class="map-container"></div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">Spatial Search</div>
+                    <div class="card-body">
+                        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+                        <div th:if="${warning}" class="alert alert-warning" th:text="${warning}"></div>
+                        <form action="/map/search" method="post">
+                            <div class="mb-3">
+                                <label for="lat" class="form-label">Latitude</label>
+                                <input type="number" step="any" class="form-control" id="lat" name="lat" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="lng" class="form-label">Longitude</label>
+                                <input type="number" step="any" class="form-control" id="lng" name="lng" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="distance" class="form-label">Distance (km)</label>
+                                <input type="number" step="any" class="form-control" id="distance" name="distance" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Search</button>
+                            <a href="/map" class="btn btn-secondary ms-2">Show All</a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="map" class="map-container"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <a href="/books" class="btn btn-secondary mt-3">Back to Books</a>
@@ -39,9 +68,33 @@
         }).addTo(map);
 
         var locations = /*[[${locations}]]*/ [];
+        var markers = [];
         locations.forEach(function(loc) {
-            L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup(loc.placeName);
+            var popup = '<strong>' + (loc.placeName || 'Location') + '</strong>';
+            if (loc.bookTitle || loc.chapterTitle) {
+                popup += '<br/><em>' + (loc.bookTitle || '') + (loc.bookTitle && loc.chapterTitle ? ' - ' : '') + (loc.chapterTitle || '') + '</em>';
+            }
+            if (loc.chapterDescription) {
+                popup += '<br/>' + loc.chapterDescription;
+            }
+            var marker = L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup(popup);
+            markers.push(marker);
         });
+
+        // If search point, add it and center
+        var searchLat = /*[[${searchLat} ? ${searchLat} : null]]*/ null;
+        var searchLng = /*[[${searchLng} ? ${searchLng} : null]]*/ null;
+        var searchDistance = /*[[${searchDistance} ? ${searchDistance} : null]]*/ null;
+        if (searchLat !== null && searchLng !== null) {
+            L.marker([searchLat, searchLng]).addTo(map).bindPopup('Search Point').openPopup();
+            map.setView([searchLat, searchLng], 10);
+            if (searchDistance) {
+                L.circle([searchLat, searchLng], {radius: searchDistance * 1000}).addTo(map);
+            }
+        } else if (markers.length > 0) {
+            var group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds());
+        }
     </script>
 </body>
 </html>

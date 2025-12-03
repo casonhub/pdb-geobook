@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Locations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">GeoBook</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/books">Books</a>
+                <a class="nav-link active" href="/locations">Locations</a>
+                <a class="nav-link" href="/multimedia">Multimedia</a>
+                <a class="nav-link" href="/map">Map</a>
+                <form method="post" action="/logout" style="display: inline;">
+                    <button type="submit" class="nav-link btn btn-link" style="border: none; background: none; color: inherit;">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Locations</h1>
+        <a href="/locations/new" class="btn btn-primary mb-3">Add New Location</a>
+        
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Place Name</th>
+                        <th>Chapter</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Spatial Data</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="location : ${locations}">
+                        <td th:text="${location.locationId}"></td>
+                        <td th:text="${location.placeName}"></td>
+                        <td th:text="${location.chapterTitle}"></td>
+                        <td th:text="${location.latitude}"></td>
+                        <td th:text="${location.longitude}"></td>
+                        <td>
+                            <span th:if="${location.spatialData}" class="badge bg-success">Yes</span>
+                            <span th:unless="${location.spatialData}" class="badge bg-warning">No</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/locations/{id}/edit(id=${location.locationId})}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <form th:action="@{/locations/{id}/delete(id=${location.locationId})}" method="post" style="display:inline;" 
+                                  onsubmit="return confirm('Are you sure?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-3">
+            <a href="/locations/spatial-test" class="btn btn-secondary">Test Spatial Functions</a>
+            <a href="/map" class="btn btn-info">View on Map</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

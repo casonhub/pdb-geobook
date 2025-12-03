@@ -11,8 +11,12 @@
             <a class="navbar-brand" href="/">GeoBook</a>
             <div class="navbar-nav">
                 <a class="nav-link active" href="/books">Books</a>
+                <a class="nav-link" href="/locations">Locations</a>
+                <a class="nav-link" href="/multimedia">Multimedia</a>
                 <a class="nav-link" href="/map">Map</a>
-                <a class="nav-link" href="/logout">Logout</a>
+                <form method="post" action="/logout" style="display: inline;">
+                    <button type="submit" class="nav-link btn btn-link" style="border: none; background: none; color: inherit;">Logout</button>
+                </form>
             </div>
         </div>
     </nav>
