@@ -1,6 +1,7 @@
 package com.geobook;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
@@ -21,10 +22,12 @@ public class Book {
     @Column(name = "isbn", unique = true)
     private String isbn;
 
+    @Lob
     @Column(name = "description")
     private String description;
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Chapter> chapters;
 
     // Getters and Setters

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Location Form</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">GeoBook</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/books">Books</a>
+                <a class="nav-link active" href="/locations">Locations</a>
+                <a class="nav-link" href="/map">Map</a>
+                <a class="nav-link" href="/multimedia">Multimedia</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4" th:text="${location.locationId} ? 'Edit Location' : 'Add New Location'"></h1>
+        
+        <form th:action="${location.locationId} ? '/locations/' + ${location.locationId} : '/locations'" 
+              th:object="${location}" method="post" class="row g-3">
+            
+            <div class="col-md-6">
+                <label for="placeName" class="form-label">Place Name</label>
+                <input type="text" class="form-control" id="placeName" th:field="*{placeName}" required>
+            </div>
+            
+            <div class="col-md-6">
+                <label for="chapter" class="form-label">Chapter</label>
+                <select class="form-select" id="chapter" th:field="*{chapter.chapterId}" required>
+                    <option value="">Select Chapter</option>
+                    <option th:each="chapter : ${chapters}" 
+                            th:value="${chapter.chapterId}" 
+                            th:text="${chapter.title + ' (Book: ' + chapter.book.title + ')'}"></option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label for="latitude" class="form-label">Latitude</label>
+                <input type="number" step="any" class="form-control" id="latitude" th:field="*{latitude}" 
+                       placeholder="e.g., 50.0755" required>
+                <div class="form-text">Decimal degrees (WGS84)</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label for="longitude" class="form-label">Longitude</label>
+                <input type="number" step="any" class="form-control" id="longitude" th:field="*{longitude}" 
+                       placeholder="e.g., 14.4378" required>
+                <div class="form-text">Decimal degrees (WGS84)</div>
+            </div>
+            
+            <div class="col-12" th:if="${location.spatialData}">
+                <label for="spatialData" class="form-label">Current Spatial Data</label>
+                <textarea class="form-control" id="spatialData" th:field="*{spatialData}" rows="3" readonly></textarea>
+                <div class="form-text">This will be automatically updated when you save the location</div>
+            </div>
+            
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <strong>Note:</strong> Spatial data (SDO_GEOMETRY) will be automatically generated from the latitude and longitude coordinates using Oracle Spatial functions.
+                </div>
+            </div>
+            
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <span th:text="${location.locationId} ? 'Update Location' : 'Create Location'"></span>
+                </button>
+                <a href="/locations" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+        </form>
+        
+        <!-- Quick coordinate picker -->
+        <div class="card mt-4">
+            <div class="card-header">Quick Coordinate Picker</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="setCoords(50.0755, 14.4378)">
+                            Prague, Czech Republic
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="setCoords(51.5074, -0.1278)">
+                            London, UK
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="setCoords(48.8566, 2.3522)">
+                            Paris, France
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function setCoords(lat, lng) {
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+        }
+    </script>
+</body>
+</html>

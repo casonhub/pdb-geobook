@@ -1,6 +1,7 @@
 package com.geobook;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
@@ -26,9 +27,10 @@ public class Location {
     private String placeName;
 
     @Column(name = "spatial_data")
-    private String spatialData; // Assuming SDO_GEOMETRY as String for simplicity
+    private String spatialData; // SDO_GEOMETRY stored as String
 
     @OneToMany(mappedBy = "location", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Multimedia> multimedia;
 
     // Getters and Setters

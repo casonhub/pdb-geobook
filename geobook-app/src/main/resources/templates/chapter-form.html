@@ -24,7 +24,7 @@
                         <h1 th:text="${chapter.chapterId != null ? 'Edit Chapter' : 'Add Chapter'}" class="card-title">Add Chapter</h1>
                     </div>
                     <div class="card-body">
-                        <form th:action="${chapter.chapterId != null ? @{/books/{bookId}/chapters/{chapterId}/edit(bookId=${chapter.book.bookId}, chapterId=${chapter.chapterId})} : @{/books/{bookId}/chapters/add(bookId=${chapter.book.bookId})}}" th:object="${chapter}" method="post">
+                        <form th:action="@{${chapter.chapterId != null ? '/books/' + chapter.book.bookId + '/chapters/' + chapter.chapterId + '/edit' : '/books/' + chapter.book.bookId + '/chapters/add'}}" th:object="${chapter}" method="post">
                             <div class="mb-3">
                                 <label for="title" class="form-label">Title:</label>
                                 <input type="text" id="title" th:field="*{title}" class="form-control" required>

@@ -1,6 +1,7 @@
 package com.geobook;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 
 @Entity
@@ -14,6 +15,7 @@ public class Multimedia {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "location_id", nullable = false)
+    @JsonIgnore
     private Location location;
 
     @Column(name = "file_type")
@@ -22,6 +24,7 @@ public class Multimedia {
     @Column(name = "file_path")
     private String filePath;
 
+    @Lob
     @Column(name = "description")
     private String description;
 
