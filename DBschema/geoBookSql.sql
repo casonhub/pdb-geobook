@@ -35,3 +35,4 @@ CREATE TABLE multimedia (
     image_pc ORDSYS.SI_ColorHistogram,
     image_tx ORDSYS.SI_PositionalColor 
 );
+

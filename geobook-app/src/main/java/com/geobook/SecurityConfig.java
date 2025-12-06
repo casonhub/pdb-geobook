@@ -14,24 +14,33 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**", "/thumbnails/**", "/multimedia", "/h2-console/**").permitAll()
+                .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**",
+                        "/thumbnails/**", "/multimedia", "/h2-console/**")
+                .permitAll()
                 .anyRequest().authenticated()
             )
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/multimedia", "/h2-console/**")
-            )
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/multimedia", "/h2-console/**"))
             .headers(headers -> headers.frameOptions().disable())
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/home", true)
                 .permitAll()
             )
-            .logout(logout -> logout
-                .logoutSuccessUrl("/login?logout")
-                .permitAll()
+            .logout(logout -> logout.logoutSuccessUrl("/login?logout"))
+            // ⭐ FIX: redirect ANY "/" request without breaking security
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) -> {
+                    if (req.getRequestURI().equals("/")) {
+                        res.sendRedirect("/home");   // redirect root → /home
+                    } else {
+                        res.sendRedirect("/login");
+                    }
+                })
             );
+
         return http.build();
     }
 
