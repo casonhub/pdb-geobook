@@ -70,11 +70,16 @@
     <a href="/" class="home-link">Home</a>
     <div class="search-container">
         <h1>Search Multimedia by Content</h1>
-        <form action="/multimedia/search" method="post">
+        <form th:action="@{/multimedia/search}" method="post">
             <label for="query">Search Query:</label>
             <input type="text" name="query" required>
+
+            <!-- CSRF token for Spring Security -->
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
             <button type="submit">Search</button>
         </form>
+
     </div>
 </body>
 </html>

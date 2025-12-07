@@ -40,6 +40,17 @@ import oracle.ord.im.*;
 import oracle.sql.ORAData; // required by ordim
 import oracle.sql.ORADataFactory; // required by ordim
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+
+import oracle.ord.im.OrdImage;
+import oracle.jdbc.OracleResultSet;
+
+import java.io.InputStream;
+
+
 @Controller
 @RequestMapping("/multimedia")
 public class MultimediaController {
@@ -254,54 +265,54 @@ public class MultimediaController {
         return "redirect:/multimedia";
     }
 
-    @PostMapping("/{id}/rotate")
-    // @ResponseBody
-    public String rotateImage(@PathVariable Long id) {
-        try {
-            Multimedia media = multimediaRepository.findById(id).orElseThrow();
-                String basePath = System.getProperty("user.dir") + "/target/classes/static";
-                String filePath = basePath + media.getFilePath();
-                File file = new File(filePath);
-            if (!file.exists()) {
-                // Check in src path for legacy files
-                basePath = System.getProperty("user.dir") + "/src/main/resources/static";
-                filePath = basePath + media.getFilePath();
-                file = new File(filePath);
-            }
-            if (!file.exists()) {
-                return "Error: File not found: " + filePath;
-            }
-            BufferedImage original = ImageIO.read(file);
-            if (original == null) {
-                return "Error: Failed to read image: " + filePath;
-            }
-            if (original.getWidth() <= 0 || original.getHeight() <= 0) {
-                return "Error: Invalid image dimensions: " + filePath;
-            }
-            // Rotate using Graphics2D
-            BufferedImage rotated = new BufferedImage(original.getHeight(), original.getWidth(),
-                    original.getType() != 0 ? original.getType() : BufferedImage.TYPE_INT_RGB);
-            Graphics2D g2d = rotated.createGraphics();
-            g2d.rotate(Math.PI / 2);
-            g2d.drawImage(original, 0, -original.getWidth(), null);
-            g2d.dispose();
-            String format = getImageFormat(file);
-            boolean success = ImageIO.write(rotated, format, file);
-            if (!success) {
-                return "Error: Failed to write rotated image: " + filePath;
-            }
-            // Update ORDImage in DB from the rotated file
-            try (FileInputStream fis = new FileInputStream(file)) {
-                ordImageService.saveStreamToOrdImage(media.getMultimediaId(), fis, "image/" + format);
-            } catch (Exception ordEx) {
-                ordEx.printStackTrace();
-                // continue even if ORDImage update fails
-            }
-             return "redirect:/multimedia";
-        } catch (Exception e) {
-            return "Error: " + e.getMessage();
-        }
-    }
+//    @PostMapping("/{id}/rotate")
+//    // @ResponseBody
+//    public String rotateImage(@PathVariable Long id) {
+//        try {
+//            Multimedia media = multimediaRepository.findById(id).orElseThrow();
+//                String basePath = System.getProperty("user.dir") + "/target/classes/static";
+//                String filePath = basePath + media.getFilePath();
+//                File file = new File(filePath);
+//            if (!file.exists()) {
+//                // Check in src path for legacy files
+//                basePath = System.getProperty("user.dir") + "/src/main/resources/static";
+//                filePath = basePath + media.getFilePath();
+//                file = new File(filePath);
+//            }
+//            if (!file.exists()) {
+//                return "Error: File not found: " + filePath;
+//            }
+//            BufferedImage original = ImageIO.read(file);
+//            if (original == null) {
+//                return "Error: Failed to read image: " + filePath;
+//            }
+//            if (original.getWidth() <= 0 || original.getHeight() <= 0) {
+//                return "Error: Invalid image dimensions: " + filePath;
+//            }
+//            // Rotate using Graphics2D
+//            BufferedImage rotated = new BufferedImage(original.getHeight(), original.getWidth(),
+//                    original.getType() != 0 ? original.getType() : BufferedImage.TYPE_INT_RGB);
+//            Graphics2D g2d = rotated.createGraphics();
+//            g2d.rotate(Math.PI / 2);
+//            g2d.drawImage(original, 0, -original.getWidth(), null);
+//            g2d.dispose();
+//            String format = getImageFormat(file);
+//            boolean success = ImageIO.write(rotated, format, file);
+//            if (!success) {
+//                return "Error: Failed to write rotated image: " + filePath;
+//            }
+//            // Update ORDImage in DB from the rotated file
+//            try (FileInputStream fis = new FileInputStream(file)) {
+//                ordImageService.saveStreamToOrdImage(media.getMultimediaId(), fis, "image/" + format);
+//            } catch (Exception ordEx) {
+//                ordEx.printStackTrace();
+//                // continue even if ORDImage update fails
+//            }
+//             return "redirect:/multimedia";
+//        } catch (Exception e) {
+//            return "Error: " + e.getMessage();
+//        }
+//    }
 
     private String getImageFormat(File file) {
         String name = file.getName().toLowerCase();
@@ -321,13 +332,11 @@ public class MultimediaController {
 
     @PostMapping("/search")
     public String searchMultimedia(@RequestParam("query") String query, Model model) {
-        // Simple text search on description
-        List<Multimedia> results = multimediaRepository.findAll().stream()
-                .filter(m -> m.getDescription().toLowerCase().contains(query.toLowerCase()))
-                .toList();
+        List<Multimedia> results = multimediaRepository.searchByDescription(query);
         model.addAttribute("results", results);
         return "multimedia-search-results";
     }
+
 
     @GetMapping("/debug")
     @ResponseBody
@@ -349,69 +358,99 @@ public class MultimediaController {
         return sb.toString();
     }
 
+//    @GetMapping("/{id}/image")
+//    public void streamImage(@PathVariable Long id, HttpServletResponse response) {
+//        try {
+//            Multimedia media = multimediaRepository.findById(id).orElseThrow();
+//            // First try to export ORDSYS image to a temp file (requires Oracle multimedia
+//            // jars at runtime)
+//            try {
+//                java.nio.file.Path tmp = ordImageService.exportOrdImageToTempFile(id);
+//                if (tmp != null && java.nio.file.Files.exists(tmp)) {
+//                    String contentType = media.getFileType();
+//                    if (contentType == null || contentType.isEmpty()) {
+//                        contentType = java.nio.file.Files.probeContentType(tmp);
+//                    }
+//                    if (contentType == null)
+//                        contentType = "application/octet-stream";
+//                    response.setContentType(contentType);
+//                    java.nio.file.Files.copy(tmp, response.getOutputStream());
+//                    response.flushBuffer();
+//                    return;
+//                }
+//            } catch (Exception ordEx) {
+//                // ORDSYS not available or export failed - fall back to static file
+//                ordEx.printStackTrace();
+//            }
+//
+//            // Fallback: serve the file stored under static images
+//            String base1 = System.getProperty("user.dir") + "/target/classes/static";
+//            java.nio.file.Path p = java.nio.file.Paths.get(base1 + media.getFilePath());
+//            if (!java.nio.file.Files.exists(p)) {
+//                String base2 = System.getProperty("user.dir") + "/src/main/resources/static";
+//                p = java.nio.file.Paths.get(base2 + media.getFilePath());
+//            }
+//            if (java.nio.file.Files.exists(p)) {
+//                String contentType = media.getFileType();
+//                if (contentType == null || contentType.isEmpty()) {
+//                    contentType = java.nio.file.Files.probeContentType(p);
+//                }
+//                if (contentType == null)
+//                    contentType = "application/octet-stream";
+//                response.setContentType(contentType);
+//                java.nio.file.Files.copy(p, response.getOutputStream());
+//                response.flushBuffer();
+//                return;
+//            }
+//            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+//        } catch (Exception e) {
+//            try {
+//                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+//            } catch (Exception ignore) {
+//            }
+//        }
+//    }
+
+//    @PostMapping("/admin/multimedia/{id}/migrate")
+//    @ResponseBody
+//    public ResponseEntity<?> migrateMultimediaToOrd(@PathVariable Long id,
+//            @RequestParam(required = false) String mimeType) {
+//        try {
+//            ordImageService.migrateBlobToOrdImage(id, mimeType);
+//            return ResponseEntity.ok(Map.of("status", "ok", "id", id));
+//        } catch (Exception e) {
+//            logger.error("Migration failed for id={}", id, e);
+//            return ResponseEntity.status(500).body(Map.of("status", "error", "message", e.getMessage()));
+//        }
+//    }
+
+
+
     @GetMapping("/{id}/image")
-    public void streamImage(@PathVariable Long id, HttpServletResponse response) {
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
         try {
-            Multimedia media = multimediaRepository.findById(id).orElseThrow();
-            // First try to export ORDSYS image to a temp file (requires Oracle multimedia
-            // jars at runtime)
-            try {
-                java.nio.file.Path tmp = ordImageService.exportOrdImageToTempFile(id);
-                if (tmp != null && java.nio.file.Files.exists(tmp)) {
-                    String contentType = media.getFileType();
-                    if (contentType == null || contentType.isEmpty()) {
-                        contentType = java.nio.file.Files.probeContentType(tmp);
-                    }
-                    if (contentType == null)
-                        contentType = "application/octet-stream";
-                    response.setContentType(contentType);
-                    java.nio.file.Files.copy(tmp, response.getOutputStream());
-                    response.flushBuffer();
-                    return;
-                }
-            } catch (Exception ordEx) {
-                // ORDSYS not available or export failed - fall back to static file
-                ordEx.printStackTrace();
+            byte[] bytes = ordImageService.loadOrdImageBytes(id);
+
+            if (bytes == null) {
+                return ResponseEntity.notFound().build();
             }
 
-            // Fallback: serve the file stored under static images
-            String base1 = System.getProperty("user.dir") + "/target/classes/static";
-            java.nio.file.Path p = java.nio.file.Paths.get(base1 + media.getFilePath());
-            if (!java.nio.file.Files.exists(p)) {
-                String base2 = System.getProperty("user.dir") + "/src/main/resources/static";
-                p = java.nio.file.Paths.get(base2 + media.getFilePath());
-            }
-            if (java.nio.file.Files.exists(p)) {
-                String contentType = media.getFileType();
-                if (contentType == null || contentType.isEmpty()) {
-                    contentType = java.nio.file.Files.probeContentType(p);
-                }
-                if (contentType == null)
-                    contentType = "application/octet-stream";
-                response.setContentType(contentType);
-                java.nio.file.Files.copy(p, response.getOutputStream());
-                response.flushBuffer();
-                return;
-            }
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        } catch (Exception e) {
-            try {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
-            } catch (Exception ignore) {
-            }
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG); // default
+
+            return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
+        }
+        catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
-    @PostMapping("/admin/multimedia/{id}/migrate")
-    @ResponseBody
-    public ResponseEntity<?> migrateMultimediaToOrd(@PathVariable Long id,
-            @RequestParam(required = false) String mimeType) {
-        try {
-            ordImageService.migrateBlobToOrdImage(id, mimeType);
-            return ResponseEntity.ok(Map.of("status", "ok", "id", id));
-        } catch (Exception e) {
-            logger.error("Migration failed for id={}", id, e);
-            return ResponseEntity.status(500).body(Map.of("status", "error", "message", e.getMessage()));
-        }
+    @PostMapping("/{id}/rotate")
+    public String rotateMultimedia(@PathVariable Long id) throws Exception {
+        ordImageService.rotateImage(id); // rotate 90 degrees clockwise
+        return "redirect:/multimedia";
     }
+
+
 }
+

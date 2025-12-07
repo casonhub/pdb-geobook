@@ -78,14 +78,14 @@
       <artifactId>ordim</artifactId>
       <version>12.2.0.1.0</version>
       <scope>system</scope>
-      <systemPath>D:\\BUT\\Advanced Database System\\project\\pdb-geobook\\geobook-app\\libs\\ordim-12.2.0.1.0.jar</systemPath>
+      <systemPath>${project.basedir}/libs/ordim-12.2.0.1.0.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>xdb</artifactId>
       <version>12.2.0.1.0</version>
       <scope>system</scope>
-      <systemPath>D:\\BUT\\Advanced Database System\\project\\pdb-geobook\\geobook-app\\libs\\xdb.jar</systemPath>
+      <systemPath>${project.basedir}/libs/xdb.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>

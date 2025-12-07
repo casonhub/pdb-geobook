@@ -32,7 +32,24 @@ CREATE TABLE multimedia (
     image ORDSYS.ORDImage,
     image_si ORDSYS.SI_StillImage,
     image_ac ORDSYS.SI_AverageColor,
-    image_pc ORDSYS.SI_ColorHistogram,
-    image_tx ORDSYS.SI_PositionalColor 
+    image_pc ORDSYS.SI_PositionalColor,
+    image_tx ORDSYS.SI_Texture,
+    image_ch ORDSYS.SI_ColorHistogram,
 );
 
+CREATE OR REPLACE TRIGGER multimedia_generateFeatures
+  BEFORE INSERT OR UPDATE OF image ON multimedia
+    FOR EACH ROW
+DECLARE
+si ORDSYS.SI_StillImage;
+BEGIN
+  IF :NEW.image IS NOT NULL AND :NEW.image.height IS NOT NULL THEN
+    si := ORDSYS.SI_StillImage(:NEW.image.getContent());
+    :NEW.image_si := si;
+    :NEW.image_ac := ORDSYS.SI_AverageColor(si);
+    :NEW.image_ch := ORDSYS.SI_ColorHistogram(si);
+    :NEW.image_pc := ORDSYS.SI_PositionalColor(si);
+    :NEW.image_tx := ORDSYS.SI_Texture(si);
+END IF;
+END multimedia_generateFeatures;
+/

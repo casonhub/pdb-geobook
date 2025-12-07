@@ -9,7 +9,15 @@ import java.time.LocalDate;
 public class Multimedia {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(
+        name = "multimedia_seq",
+        sequenceName = "MULTIMEDIA_SEQ",
+        allocationSize = 1
+    )
+    @GeneratedValue(
+        strategy = GenerationType.SEQUENCE,
+        generator = "multimedia_seq"
+    )
     @Column(name = "multimedia_id")
     private Long multimediaId;
 
@@ -24,9 +32,11 @@ public class Multimedia {
     @Column(name = "file_path")
     private String filePath;
 
-    @Lob
-    @Column(name = "description")
-    private String description;
+//    @Lob
+//    @Column(name = "description")
+//    private String description;
+@Column(name = "DESCRIPTION")
+private String description;
 
     @Column(name = "upload_date")
     private LocalDate uploadDate;
@@ -37,9 +47,9 @@ public class Multimedia {
     @Column(name = "thumbnail_path")
     private String thumbnailPath;
 
-    // Skipping ORDSYS columns for simplicity
+    // NO ORDImage fields here - they're managed by native SQL
 
-    // Getters and Setters
+    // Getters and Setters (ONLY for the fields above)
     public Long getMultimediaId() {
         return multimediaId;
     }
@@ -101,6 +111,22 @@ public class Multimedia {
     }
 
     public void setThumbnailPath(String thumbnailPath) {
+        this.thumbnailPath = thumbnailPath;
+    }
+
+    // Constructors
+    public Multimedia() {}
+
+    public Multimedia(Long multimediaId, Location location, String fileType, 
+                     String filePath, String description, LocalDate uploadDate, 
+                     Character isActive, String thumbnailPath) {
+        this.multimediaId = multimediaId;
+        this.location = location;
+        this.fileType = fileType;
+        this.filePath = filePath;
+        this.description = description;
+        this.uploadDate = uploadDate;
+        this.isActive = isActive;
         this.thumbnailPath = thumbnailPath;
     }
 }
