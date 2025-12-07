@@ -1,323 +1,353 @@
 package com.geobook;
 
+import oracle.jdbc.OraclePreparedStatement;
+import oracle.jdbc.OracleResultSet;
+import oracle.ord.im.OrdImage;
+import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import javax.sql.DataSource;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
+import java.io.File;
+import java.nio.file.Files;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 public class OrdImageService {
-
-    private static final Logger logger = LoggerFactory.getLogger(OrdImageService.class);
 
     @Autowired
     private DataSource dataSource;
 
     /**
-     * Save uploaded multipart file into the ORDSYS.ORDImage column for the given multimedia_id.
-     * Uses reflection to call Oracle OrdImage APIs at runtime so compilation does not require Oracle jars.
+     * Save MultipartFile → ORDImage
      */
     public void saveMultipartToOrdImage(Long multimediaId, MultipartFile file) throws Exception {
         try (InputStream in = file.getInputStream()) {
-            saveStreamToOrdImage(multimediaId, in, file.getContentType());
+            saveStreamToOrdImage(multimediaId, in);
         }
     }
 
     /**
-     * Update ORDSYS.ORDImage from a File InputStream (used after rotating the on-disk file).
-     * When Oracle Multimedia JARs are missing, falls back to image_blob BLOB column.
+     * Save InputStream → ORDImage
      */
-    public void saveStreamToOrdImage(Long multimediaId, InputStream in, String mimeType) throws Exception {
-        java.sql.Connection conn = DataSourceUtils.getConnection(dataSource);
-        boolean ok = false;
+    public void saveStreamToOrdImage(Long multimediaId, InputStream in) throws Exception {
+
+        Connection conn = DataSourceUtils.getConnection(dataSource);
+        boolean oldAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+
         try {
-            conn.setAutoCommit(false);
+            OrdImage ordImageObj = null;
 
-            // FIRST: Try ORDImage flow (preferred when JARs are available)
-            try {
-                // Ensure there is an ORDImage locator by using ORDSYS.ORDIMAGE() in UPDATE
-                try (PreparedStatement upd = conn.prepareStatement("UPDATE multimedia SET image = ORDSYS.ORDIMAGE() WHERE multimedia_id = ?")) {
-                    upd.setLong(1, multimediaId);
-                    upd.executeUpdate();
-                }
+            // 1️⃣ SELECT existing ORDImage locator FOR UPDATE
+            try (PreparedStatement ps =
+                         conn.prepareStatement("SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
+                ps.setLong(1, multimediaId);
 
-                try (PreparedStatement sel = conn.prepareStatement("SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
-                    sel.setLong(1, multimediaId);
-                    try (ResultSet rs = sel.executeQuery()) {
-                        if (!rs.next()) {
-                            throw new IllegalStateException("multimedia row not found: " + multimediaId);
-                        }
-                        Object imageObj = rs.getObject(1);
-
-                        // Dynamically load oracle.ord.im.OrdImage and call methods via reflection
-                        logger.debug("Attempting to load oracle.ord.im.OrdImage class");
-                        Class<?> ordImageClass = Class.forName("oracle.ord.im.OrdImage");
-                        logger.debug("Successfully loaded OrdImage class: {}", ordImageClass.getName());
-
-                        // Create OrdImage from the STRUCT using ORADataFactory.create
-                        Class<?> datumClass = Class.forName("oracle.sql.Datum");
-                        java.lang.reflect.Method createMethod = ordImageClass.getMethod("create", datumClass, int.class);
-                        Object ordImage = createMethod.invoke(null, imageObj, 0);
-                        logger.debug("Successfully created OrdImage instance from STRUCT");
-
-                        // Load data from stream
-                        java.lang.reflect.Method loadData = ordImageClass.getMethod("loadDataFromInputStream", java.io.InputStream.class);
-                        loadData.invoke(ordImage, in);
-
-                        // IMPORTANT: call setProperties() to process the image
-                        java.lang.reflect.Method setProperties = ordImageClass.getMethod("setProperties");
-                        setProperties.invoke(ordImage);
-
-                        // UPDATE the ORDImage column using setORAData
-                        try (PreparedStatement upd = conn.prepareStatement("UPDATE multimedia SET image = ? WHERE multimedia_id = ?")) {
-                            Class<?> oraclePreparedStatementClass = Class.forName("oracle.jdbc.OraclePreparedStatement");
-                            java.lang.reflect.Method setORAData = oraclePreparedStatementClass.getMethod("setORAData", int.class, Class.forName("oracle.sql.ORAData"));
-                            setORAData.invoke(upd, 1, ordImage);
-                            upd.setLong(2, multimediaId);
-                            upd.executeUpdate();
-                        }
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        OracleResultSet ors = (OracleResultSet) rs;
+                        ordImageObj = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
                     }
                 }
-
-                // Now compute SI_* descriptors (2-step SQL like the lab example)
-                computeStillImageDescriptors(conn, multimediaId);
-
-                conn.commit();
-                ok = true;
-                logger.info("Successfully saved ORDImage for multimedia id={}", multimediaId);
-                return; // SUCCESS - ORDImage worked
-
-            } catch (ClassNotFoundException cnfe) {
-                // Oracle ORDImage classes not available on classpath - fall back to image_blob
-                logger.warn("Oracle Multimedia JARs not found (ClassNotFoundException: {}), falling back to image_blob for multimedia id={}", cnfe.getMessage(), multimediaId);
-                try { conn.rollback(); } catch (Exception ignore) {} // rollback any partial ORDImage work
-            } catch (Exception ordImageEx) {
-                // ORDImage flow failed for other reasons - fall back to image_blob
-                logger.warn("ORDImage flow failed for multimedia id={}, falling back to image_blob: {}", multimediaId, ordImageEx.getMessage(), ordImageEx);
-                try { conn.rollback(); } catch (Exception ignore) {}
             }
 
-            // FALLBACK: Try image_blob BLOB column
-            try {
-                try (java.sql.PreparedStatement upd = conn.prepareStatement("UPDATE multimedia SET image_blob = EMPTY_BLOB() WHERE multimedia_id = ?")) {
-                    upd.setLong(1, multimediaId);
-                    upd.executeUpdate();
+            // If row didn't exist OR image column is NULL → initialize
+            if (ordImageObj == null) {
+                try (PreparedStatement ps =
+                             conn.prepareStatement("UPDATE multimedia SET image = ordsys.ordimage.init() WHERE multimedia_id = ?")) {
+                    ps.setLong(1, multimediaId);
+                    ps.executeUpdate();
                 }
 
-                try (java.sql.PreparedStatement sel = conn.prepareStatement("SELECT image_blob FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
-                    sel.setLong(1, multimediaId);
-                    try (java.sql.ResultSet rs = sel.executeQuery()) {
-                        if (!rs.next()) {
-                            throw new IllegalStateException("multimedia row not found: " + multimediaId);
-                        }
-                        java.sql.Blob blob = rs.getBlob(1);
-                        if (blob != null) {
-                            try (java.io.OutputStream out = blob.setBinaryStream(1)) {
-                                in.transferTo(out);
-                            }
-                            try { rs.updateBlob(1, blob); rs.updateRow(); } catch (Throwable ignore) {}
-                        } else {
-                            throw new IllegalStateException("image_blob is null after EMPTY_BLOB() for multimedia id: " + multimediaId);
-                        }
-                    }
-                }
-                conn.commit();
-                ok = true;
-                logger.info("Successfully saved to image_blob fallback for multimedia id={}", multimediaId);
-                return; // SUCCESS - image_blob worked
+                // Select again (now FOR UPDATE)
+                try (PreparedStatement ps =
+                             conn.prepareStatement("SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
+                    ps.setLong(1, multimediaId);
 
-            } catch (Exception blobEx) {
-                logger.error("Both ORDImage and image_blob fallback failed for multimedia id={}: {}", multimediaId, blobEx.getMessage());
-                try { conn.rollback(); } catch (Exception ignore) {}
-                throw new IllegalStateException("Failed to save image - both ORDImage and image_blob fallback failed", blobEx);
-            }
-        } finally {
-            DataSourceUtils.releaseConnection(conn, dataSource);
-        }
-    }
-
-    /**
-     * Migrate existing plain BLOB stored in `image_blob` into the ORDSYS.ORDImage column.
-     * This reads image_blob FOR UPDATE, initializes ORDSYS locator and uses reflection to call OrdImage APIs.
-     * Assumes Oracle Multimedia JARs are available (no fallback to image_blob).
-     */
-    public void migrateBlobToOrdImage(Long multimediaId, String mimeType) throws Exception {
-        java.sql.Connection conn = DataSourceUtils.getConnection(dataSource);
-        try {
-            conn.setAutoCommit(false);
-
-            // Read existing image_blob FOR UPDATE
-            try (java.sql.PreparedStatement sel = conn.prepareStatement("SELECT image_blob FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
-                sel.setLong(1, multimediaId);
-                try (java.sql.ResultSet rs = sel.executeQuery()) {
-                    if (!rs.next()) {
-                        throw new IllegalStateException("multimedia row not found: " + multimediaId);
-                    }
-                    java.sql.Blob blob = rs.getBlob(1);
-                    if (blob == null) {
-                        throw new IllegalStateException("image_blob is null for multimedia id: " + multimediaId);
-                    }
-
-                    // Initialize ORDImage locator in the row
-                    try (java.sql.PreparedStatement init = conn.prepareStatement("UPDATE multimedia SET image = ORDSYS.ORDIMAGE() WHERE multimedia_id = ?")) {
-                        init.setLong(1, multimediaId);
-                        init.executeUpdate();
-                    }
-
-                    // Select the ORDSYS image locator FOR UPDATE
-                    try (java.sql.PreparedStatement sel2 = conn.prepareStatement("SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
-                        sel2.setLong(1, multimediaId);
-                        try (java.sql.ResultSet rs2 = sel2.executeQuery()) {
-                            if (!rs2.next()) {
-                                throw new IllegalStateException("multimedia row not found after init: " + multimediaId);
-                            }
-                            Object imageObj = rs2.getObject(1);
-
-                            // Use reflection to create OrdImage and write data
-                            Class<?> ordImageClass = Class.forName("oracle.ord.im.OrdImage");
-                            // Create OrdImage from the STRUCT using ORADataFactory.create
-                            Class<?> datumClass = Class.forName("oracle.sql.Datum");
-                            java.lang.reflect.Method createMethod = ordImageClass.getMethod("create", datumClass, int.class);
-                            Object ordImage = createMethod.invoke(null, imageObj, 0);
-
-                            // stream data from image_blob into OrdImage
-                            try (java.io.InputStream in = blob.getBinaryStream()) {
-                                java.lang.reflect.Method loadData = ordImageClass.getMethod("loadDataFromInputStream", java.io.InputStream.class);
-                                loadData.invoke(ordImage, in);
-                            }
-
-                            // IMPORTANT: call setProperties() to process the image
-                            java.lang.reflect.Method setProperties = ordImageClass.getMethod("setProperties");
-                            setProperties.invoke(ordImage);
-
-                            // UPDATE the ORDImage column using setORAData
-                            try (PreparedStatement upd = conn.prepareStatement("UPDATE multimedia SET image = ? WHERE multimedia_id = ?")) {
-                                Class<?> oraclePreparedStatementClass = Class.forName("oracle.jdbc.OraclePreparedStatement");
-                                java.lang.reflect.Method setORAData = oraclePreparedStatementClass.getMethod("setORAData", int.class, Class.forName("oracle.sql.ORAData"));
-                                setORAData.invoke(upd, 1, ordImage);
-                                upd.setLong(2, multimediaId);
-                                upd.executeUpdate();
-                            }
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            OracleResultSet ors = (OracleResultSet) rs;
+                            ordImageObj = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
                         }
                     }
                 }
             }
 
-            // Compute SI_* descriptors (2-step SQL)
+            // 2️⃣ Load data from input stream
+            ordImageObj.loadDataFromInputStream(in);
+
+            // 3️⃣ Auto-populate metadata (size, height, width…)
+            ordImageObj.setProperties();
+
+            // 4️⃣ UPDATE the ORDImage column
+            try (PreparedStatement ps =
+                         conn.prepareStatement("UPDATE multimedia SET image = ? WHERE multimedia_id = ?")) {
+
+                OraclePreparedStatement ops = (OraclePreparedStatement) ps;
+                ops.setORAData(1, ordImageObj);
+                ps.setLong(2, multimediaId);
+
+                ps.executeUpdate();
+            }
+
+            // 5️⃣ Compute SI_* (You already have a trigger; but adding SQL method too)
             computeStillImageDescriptors(conn, multimediaId);
 
             conn.commit();
-            logger.info("Successfully migrated image_blob to ORDImage for multimedia id={}", multimediaId);
-        } catch (ClassNotFoundException cnfe) {
-            throw new IllegalStateException("Oracle ORDImage classes not found on classpath. Add Oracle Multimedia jars to enable migration.", cnfe);
+
+        } catch (Exception ex) {
+            conn.rollback();
+            throw ex;
+        } finally {
+            conn.setAutoCommit(oldAutoCommit);
+            DataSourceUtils.releaseConnection(conn, dataSource);
+        }
+    }
+
+
+
+    /**
+     * Load ORDImage locator FOR UPDATE
+     */
+    private OrdImage loadOrdImageForUpdate(Connection conn, Long id) throws Exception {
+
+        OrdImage ord = null;
+
+        String sql = "SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    OracleResultSet ors = (OracleResultSet) rs;
+                    ord = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
+                }
+            }
+        }
+
+        // Initialize if null
+        if (ord == null) {
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE multimedia SET image = ordsys.ordimage.init() WHERE multimedia_id = ?")) {
+                ps.setLong(1, id);
+                ps.executeUpdate();
+            }
+
+            // Fetch again
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, id);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        OracleResultSet ors = (OracleResultSet) rs;
+                        ord = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
+                    }
+                }
+            }
+        }
+
+        return ord;
+    }
+
+    /**
+     * Load ORDImage and convert to byte[]
+     */
+    public byte[] loadOrdImageBytes(Long id) throws Exception {
+
+        Connection conn = DataSourceUtils.getConnection(dataSource);
+
+        try {
+            OrdImage img = null;
+
+            String sql = "SELECT image FROM multimedia WHERE multimedia_id = ?";
+
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, id);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        OracleResultSet ors = (OracleResultSet) rs;
+                        img = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
+                    }
+                }
+            }
+
+            if (img == null)
+                return null;
+
+            // Save ORDImage to a temporary file then read as bytes
+            File temp = File.createTempFile("ordimage_", ".tmp");
+            temp.deleteOnExit();
+
+            img.getDataInFile(temp.getAbsolutePath());
+
+            return Files.readAllBytes(temp.toPath());
+        }
+        finally {
+            DataSourceUtils.releaseConnection(conn, dataSource);
+        }
+    }
+
+    /**
+     * Compute SI descriptors
+     */
+    private void computeStillImageDescriptors(Connection conn, Long id) throws SQLException {
+
+        String si = "UPDATE multimedia p " +
+                "SET p.image_si = SI_StillImage(p.image.getContent()) WHERE multimedia_id = ?";
+
+        String features = "UPDATE multimedia SET " +
+                "image_ac = SI_AverageColor(image_si), " +
+                "image_ch = SI_ColorHistogram(image_si), " +
+                "image_pc = SI_PositionalColor(image_si), " +
+                "image_tx = SI_Texture(image_si) " +
+                "WHERE multimedia_id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(si)) {
+            ps.setLong(1, id);
+            ps.executeUpdate();
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(features)) {
+            ps.setLong(1, id);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Rotate the image by degrees (90, 180, 270)
+     */
+    public byte[] loadImageAsBytes(Long multimediaId) throws Exception {
+        Connection conn = DataSourceUtils.getConnection(dataSource);
+        try {
+            OrdImage ordImageObj = null;
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT image FROM multimedia WHERE multimedia_id = ?")) {
+
+                ps.setLong(1, multimediaId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        OracleResultSet ors = rs.unwrap(OracleResultSet.class);
+                        ordImageObj = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
+                    }
+                }
+            }
+
+            if (ordImageObj == null) {
+                throw new Exception("ORDImage not found for ID: " + multimediaId);
+            }
+
+            // Read bytes
+            InputStream in = ordImageObj.getDataInStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                baos.write(buffer, 0, read);
+            }
+            return baos.toByteArray();
+
+        } finally {
+            DataSourceUtils.releaseConnection(conn, dataSource);
+        }
+    }
+
+    /**
+     * Rotate image 90 degrees clockwise and update in DB
+     */
+    public void rotateImage(Long multimediaId) throws Exception {
+        Connection conn = DataSourceUtils.getConnection(dataSource);
+        boolean oldAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+
+        try {
+            OrdImage ordImageObj = null;
+
+            // Fetch ORDImage with FOR UPDATE
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT image FROM multimedia WHERE multimedia_id = ? FOR UPDATE")) {
+
+                ps.setLong(1, multimediaId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        OracleResultSet ors = rs.unwrap(OracleResultSet.class);
+                        ordImageObj = (OrdImage) ors.getORAData(1, OrdImage.getORADataFactory());
+                    }
+                }
+            }
+
+            if (ordImageObj == null) {
+                throw new Exception("ORDImage not found for ID: " + multimediaId);
+            }
+
+            // Read original bytes
+            InputStream in = ordImageObj.getDataInStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                baos.write(buffer, 0, read);
+            }
+            byte[] originalBytes = baos.toByteArray();
+
+            // Rotate bytes
+            byte[] rotatedBytes = rotate90Clockwise(originalBytes);
+
+            // Load rotated bytes back into ORDImage
+            ordImageObj.loadDataFromByteArray(rotatedBytes);
+            ordImageObj.setProperties();
+
+            // Update database
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE multimedia SET image = ? WHERE multimedia_id = ?")) {
+
+                OraclePreparedStatement ops = ps.unwrap(OraclePreparedStatement.class);
+                ops.setORAData(1, ordImageObj);
+                ps.setLong(2, multimediaId);
+                ps.executeUpdate();
+            }
+
+            conn.commit();
         } catch (Exception e) {
-            try { conn.rollback(); } catch (Exception ignore) {}
+            conn.rollback();
             throw e;
         } finally {
+            conn.setAutoCommit(oldAutoCommit);
             DataSourceUtils.releaseConnection(conn, dataSource);
         }
     }
 
     /**
-     * Export ORDImage content for the multimedia row into a temporary file and return its Path.
-     * Returns null if ORDImage classes are not available or the row has no image.
+     * Rotate image bytes 90 degrees clockwise
      */
-    public java.nio.file.Path exportOrdImageToTempFile(Long multimediaId) throws Exception {
-        java.sql.Connection conn = DataSourceUtils.getConnection(dataSource);
-        try {
-            // First try the plain BLOB column image_blob
-            try (java.sql.PreparedStatement selBlob = conn.prepareStatement("SELECT image_blob FROM multimedia WHERE multimedia_id = ?")) {
-                selBlob.setLong(1, multimediaId);
-                try (java.sql.ResultSet rsb = selBlob.executeQuery()) {
-                    if (rsb.next()) {
-                        java.sql.Blob b = rsb.getBlob(1);
-                        if (b != null) {
-                            java.nio.file.Path tmp = java.nio.file.Files.createTempFile("imageblob-", ".bin");
-                            try (java.io.InputStream in = b.getBinaryStream(); java.io.OutputStream out = java.nio.file.Files.newOutputStream(tmp)) {
-                                in.transferTo(out);
-                            }
-                            tmp.toFile().deleteOnExit();
-                            return tmp;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException ignore) {
-                // image_blob not present or other error — fallthrough to ORDImage
-            }
+    private byte[] rotate90Clockwise(byte[] imageBytes) throws Exception {
+        InputStream input = new ByteArrayInputStream(imageBytes);
+        BufferedImage original = ImageIO.read(input);
+        int width = original.getWidth();
+        int height = original.getHeight();
 
-            // Fallback: use ORDImage via reflection
-            try (java.sql.PreparedStatement sel = conn.prepareStatement("SELECT image FROM multimedia WHERE multimedia_id = ?")) {
-                sel.setLong(1, multimediaId);
-                try (java.sql.ResultSet rs = sel.executeQuery()) {
-                    if (!rs.next()) {
-                        return null;
-                    }
-                    Object blobObj = rs.getObject(1);
+        BufferedImage rotated = new BufferedImage(height, width, original.getType());
+        Graphics2D g2d = rotated.createGraphics();
+        g2d.translate((height - width) / 2.0, (height - width) / 2.0);
+        g2d.rotate(Math.toRadians(90), height / 2.0, width / 2.0);
+        g2d.drawImage(original, 0, 0, null);
+        g2d.dispose();
 
-                    // Dynamically create oracle.ord.im.OrdImage and call getDataInFile via reflection
-                    Class<?> ordImageClass = Class.forName("oracle.ord.im.OrdImage");
-                    // Create OrdImage from the STRUCT using ORADataFactory.create
-                    Class<?> datumClass = Class.forName("oracle.sql.Datum");
-                    java.lang.reflect.Method createMethod = ordImageClass.getMethod("create", datumClass, int.class);
-                    Object ordImage = createMethod.invoke(null, blobObj, 0);
-
-                    java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ordimage-", ".bin");
-                    // invoke getDataInFile(String filename)
-                    java.lang.reflect.Method getDataInFile = ordImageClass.getMethod("getDataInFile", String.class);
-                    getDataInFile.invoke(ordImage, tmp.toString());
-                    // best-effort cleanup on JVM exit
-                    tmp.toFile().deleteOnExit();
-                    return tmp;
-                }
-            }
-        } catch (ClassNotFoundException cnfe) {
-            // Oracle ORDImage classes not present on classpath
-            return null;
-        } finally {
-            DataSourceUtils.releaseConnection(conn, dataSource);
-        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(rotated, "PNG", baos);
+        return baos.toByteArray();
     }
 
-    /**
-     * Compute SI_StillImage and its feature descriptors (SI_AverageColor, SI_ColorHistogram, SI_PositionalColor, SI_Texture).
-     * Follows the oracle-lab-multimedia pattern: 2-step SQL execution.
-     * Step 1: Create SI_StillImage from ORDImage.getContent()
-     * Step 2: Compute SI_* feature descriptors from SI_StillImage
-     */
-    private void computeStillImageDescriptors(Connection conn, Long multimediaId) {
-        try {
-            // Step 1: Create SI_StillImage from ORDImage.getContent()
-            try (PreparedStatement step1 = conn.prepareStatement(
-                    "UPDATE multimedia p SET p.image_si = SI_StillImage(p.image.getContent()) WHERE p.multimedia_id = ?")) {
-                step1.setLong(1, multimediaId);
-                step1.executeUpdate();
-                logger.info("Created SI_StillImage for multimedia id={}", multimediaId);
-            }
-
-            // Step 2: Compute all SI_* feature descriptors from SI_StillImage
-            try (PreparedStatement step2 = conn.prepareStatement(
-                    "UPDATE multimedia SET " +
-                    "image_ac = SI_AverageColor(image_si), " +
-                    "image_ch = SI_ColorHistogram(image_si), " +
-                    "image_pc = SI_PositionalColor(image_si), " +
-                    "image_tx = SI_Texture(image_si) " +
-                    "WHERE multimedia_id = ?")) {
-                step2.setLong(1, multimediaId);
-                step2.executeUpdate();
-                logger.info("Computed SI_* feature descriptors for multimedia id={}", multimediaId);
-            }
-        } catch (Exception e) {
-            // Log but don't fail the transaction - SI_* descriptors are optional enhancements
-            logger.warn("Failed to compute SI_* descriptors for multimedia id={}: {}", multimediaId, e.getMessage());
-        }
-    }
 }

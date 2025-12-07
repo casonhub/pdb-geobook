@@ -34,14 +34,14 @@ public class OrdImageJdbcServiceDirect {
         throw new UnsupportedOperationException("Use OrdImageService or implement BLOB fallback. This method is not supported in the direct service stub.");
     }
 
-    public void saveImageFileToDb(Long multimediaId, String filename, String mimeType) throws Exception {
-        if (ordImageService == null) {
-            throw new IllegalStateException("Oracle OrdImage classes not available on classpath. Place Oracle multimedia jars in libs/ and restart.");
-        }
-        try (InputStream in = java.nio.file.Files.newInputStream(java.nio.file.Paths.get(filename))) {
-            ordImageService.saveStreamToOrdImage(multimediaId, in, mimeType);
-        }
-    }
+//    public void saveImageFileToDb(Long multimediaId, String filename, String mimeType) throws Exception {
+//        if (ordImageService == null) {
+//            throw new IllegalStateException("Oracle OrdImage classes not available on classpath. Place Oracle multimedia jars in libs/ and restart.");
+//        }
+//        try (InputStream in = java.nio.file.Files.newInputStream(java.nio.file.Paths.get(filename))) {
+//            ordImageService.saveStreamToOrdImage(multimediaId, in, mimeType);
+//        }
+//    }
 
     public void streamImageToOutput(Long multimediaId, OutputStream out) throws Exception {
         throw new UnsupportedOperationException("Streaming from ORDSYS directly is not implemented in this stub. Use OrdImageService or add the Oracle multimedia jars and implement streaming.");

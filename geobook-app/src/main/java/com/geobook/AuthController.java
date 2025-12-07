@@ -48,17 +48,6 @@ public class AuthController {
             session.invalidate();
         }
 
-        // Optional: Clear any authentication cookies
-        // Cookie[] cookies = request.getCookies();
-        // if (cookies != null) {
-        // for (Cookie cookie : cookies) {
-        // if (cookie.getName().equals("JSESSIONID")) {
-        // cookie.setMaxAge(0);
-        // response.addCookie(cookie);
-        // }
-        // }
-        // }
-
         return "redirect:/login?logout";
     }
 }

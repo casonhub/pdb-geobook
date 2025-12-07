@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
@@ -8,7 +9,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.2.0</version>
-    <relativePath/>
+    <relativePath />
   </parent>
 
   <groupId>com.geobook</groupId>
@@ -21,8 +22,6 @@
 
   <properties>
     <java.version>17</java.version>
-    <ordim.jar.path>/home/samantha/Documents/geo-book/pdb-geobook/geobook-app/libs/ordim-12.2.0.1.0.jar</ordim.jar.path>
-    <xdb.jar.path>/home/samantha/Documents/geo-book/pdb-geobook/geobook-app/libs/xdb.jar</xdb.jar.path>
   </properties>
 
   <dependencies>
@@ -42,9 +41,17 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
     </dependency>
+    <!-- <dependency>
+      <groupId>com.oracle.database.jdbc</groupId>
+      <artifactId>ojdbc8</artifactId>
+      <scope>runtime</scope>
+    </dependency> -->
     <dependency>
       <groupId>com.oracle.database.jdbc</groupId>
       <artifactId>ojdbc8</artifactId>
+      <version>19.12.0.0</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/libs/ojdbc8.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.h2database</groupId>
@@ -71,14 +78,18 @@
       <artifactId>ordim</artifactId>
       <version>12.2.0.1.0</version>
       <scope>system</scope>
-      <systemPath>${ordim.jar.path}</systemPath>
+      <systemPath>${project.basedir}/libs/ordim-12.2.0.1.0.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>xdb</artifactId>
       <version>12.2.0.1.0</version>
       <scope>system</scope>
-      <systemPath>${xdb.jar.path}</systemPath>
+      <systemPath>${project.basedir}/libs/xdb.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-jdbc</artifactId>
     </dependency>
   </dependencies>
 
