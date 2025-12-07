@@ -102,7 +102,8 @@ public class Location {
         if (spatialData == null) return null;
         Connection conn = dataSource.getConnection();
         try {
-            // Convert WKT string to SDO_GEOMETRY 
+            // Convert WKT string to SDO_GEOMETRY
+            String sql = "SELECT SDO_UTIL.TO_WKTGEOMETRY(?) FROM DUAL"; 
             var stmt = conn.prepareStatement(sql);
             stmt.setString(1, spatialData);
             var rs = stmt.executeQuery();
