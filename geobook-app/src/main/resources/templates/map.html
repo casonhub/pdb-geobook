@@ -2,21 +2,100 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Map</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <style>
         #map { height: 500px; width: 100%; }
+        .bg-point { background-color: #0d6efd !important; }
+        .bg-polygon { background-color: #198754 !important; }
+        .bg-linestring { background-color: #ffc107 !important; color: #000 !important; }
+        .bg-circle { background-color: #0dcaf0 !important; color: #000 !important; }
+        .bg-rectangle { background-color: #6f42c1 !important; }
+        
+        /* Custom marker styles */
+        .custom-div-icon {
+            background: none;
+            border: none;
+        }
+        
+        /* Enhanced popup styling */
+        .entity-popup h6 {
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        
+        .entity-popup .badge {
+            margin-bottom: 0.5rem;
+        }
+        
+        .entity-popup .btn {
+            font-size: 0.75rem;
+        }
+        
+        /* Legend styles */
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .legend-symbol {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        
+        .legend-symbol.point {
+            border-radius: 50%;
+        }
+        
+        .legend-symbol.line {
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        /* Map control styles */
+        .leaflet-control-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Hover effects for entities */
+        .leaflet-interactive:hover {
+            cursor: pointer;
+            filter: brightness(1.1);
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/">GeoBook</a>
-            <div class="navbar-nav">
-                <a class="nav-link" href="/books">Books</a>
-                <a class="nav-link active" href="/map">Map</a>
-                <a class="nav-link" href="/logout">Logout</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav">
+                    <a class="nav-link" href="/books">Books</a>
+        
+                    <a class="nav-link" href="/locations">Locations</a>
+                    <a class="nav-link active" href="/multimedia">Multimedia</a>
+                
+                    <a class="nav-link active" href="/map">Map</a>
+                    <a class="nav-link" href="/logout">Logout</a>
+                </div>
             </div>
         </div>
     </nav>
@@ -24,7 +103,7 @@
         <h1 class="mb-4">Locations Map</h1>
         <div class="row">
             <div class="col-md-4">
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header">Spatial Search</div>
                     <div class="card-body">
                         <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
@@ -47,6 +126,59 @@
                         </form>
                     </div>
                 </div>
+
+                <!-- Spatial Entity Management -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">Spatial Entities</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createEntityModal">
+                                <i class="fas fa-plus"></i> Create Entity
+                            </button>
+                           
+                        </div>
+                        
+                        <!-- Entity List -->
+                        <div class="spatial-entities-list" style="max-height: 300px; overflow-y: auto;">
+                            <div th:each="entity : ${spatialEntities}" class="entity-item border rounded p-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong th:text="${entity.name}"></strong>
+                                        <br>
+                                        <span th:class="'badge bg-' + ${entity.entityType.toLowerCase()}" th:text="${entity.entityType}"></span>
+                                        <small class="text-muted d-block" th:text="${entity.description}"></small>
+                                    </div>
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" th:onclick="'editEntity(' + ${entity.entityId} + ')'" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" th:onclick="'deleteEntity(' + ${entity.entityId} + ')'" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${spatialEntities == null or spatialEntities.empty}" class="text-center text-muted">
+                                No spatial entities found.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+              
+                <div class="card" th:if="${entityCounts}">
+                    <div class="card-header">
+                        <h6 class="mb-0">Quick Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <div th:each="entry : ${entityCounts}" class="d-flex justify-content-between mb-1">
+                            <span th:text="${entry.key}"></span>
+                            <span class="badge bg-secondary" th:text="${entry.value}"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-8">
                 <div class="card">
@@ -61,14 +193,28 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script th:inline="javascript">
-        var map = L.map('map').setView([51.505, -0.09], 13);
+
+        // CSRF Token support
+        function getCsrfToken() {
+            return document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        }
+        
+        function getCsrfHeader() {
+            return document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+        }
+        
+        var map = L.map('map').setView([40.7128, -74.0060], 10);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
         var locations = /*[[${locations}]]*/ [];
+        var spatialEntities = /*[[${spatialEntities}]]*/ [];
         var markers = [];
+        var entityLayers = [];
+
+    
         locations.forEach(function(loc) {
             var popup = '<strong>' + (loc.placeName || 'Location') + '</strong>';
             if (loc.bookTitle || loc.chapterTitle) {
@@ -81,20 +227,554 @@
             markers.push(marker);
         });
 
-        // If search point, add it and center
-        var searchLat = /*[[${searchLat} ? ${searchLat} : null]]*/ null;
-        var searchLng = /*[[${searchLng} ? ${searchLng} : null]]*/ null;
-        var searchDistance = /*[[${searchDistance} ? ${searchDistance} : null]]*/ null;
-        if (searchLat !== null && searchLng !== null) {
-            L.marker([searchLat, searchLng]).addTo(map).bindPopup('Search Point').openPopup();
-            map.setView([searchLat, searchLng], 10);
-            if (searchDistance) {
-                L.circle([searchLat, searchLng], {radius: searchDistance * 1000}).addTo(map);
+        // Display spatial entities
+        spatialEntities.forEach(function(entity) {
+            displaySpatialEntity(entity);
+        });
+
+        function displaySpatialEntity(entity) {
+            var layer = null;
+            var coordinates = parseOracleGeometry(entity.geometry);
+            var color = entity.color || getDefaultColor(entity.entityType);
+            
+            var popup = `
+                <div class="entity-popup">
+                    <h6><strong>${entity.name}</strong></h6>
+                    <span class="badge bg-secondary">${entity.entityType}</span><br>
+                    <small class="text-muted">${entity.description || 'No description'}</small><br>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editEntity(${entity.entityId})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteEntity(${entity.entityId})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            switch(entity.entityType) {
+                case 'POINT':
+                    if (coordinates && coordinates.length >= 2) {
+                        // Custom icon based on entity type
+                        var customIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+                        layer = L.marker([coordinates[1], coordinates[0]], {icon: customIcon});
+                    }
+                    break;
+                    
+                case 'LINESTRING':
+                    if (coordinates && coordinates.length >= 4) {
+                        var latlngs = [];
+                        for (var i = 0; i < coordinates.length; i += 2) {
+                            latlngs.push([coordinates[i + 1], coordinates[i]]);
+                        }
+                        layer = L.polyline(latlngs, {
+                            color: color,
+                            weight: 5,
+                            opacity: 0.8
+                        });
+                    }
+                    break;
+                    
+                case 'POLYGON':
+                case 'RECTANGLE':
+                    if (coordinates && coordinates.length >= 8) {
+                        var latlngs = [];
+                        for (var i = 0; i < coordinates.length; i += 2) {
+                            latlngs.push([coordinates[i + 1], coordinates[i]]);
+                        }
+                        layer = L.polygon(latlngs, {
+                            color: color,
+                            fillColor: color,
+                            fillOpacity: 0.3,
+                            weight: 3
+                        });
+                    }
+                    break;
+                    
+                case 'CIRCLE':
+                    if (coordinates && coordinates.length >= 6) {
+                        // For circles, use the first point as center and calculate radius
+                        var centerLat = coordinates[1];
+                        var centerLng = coordinates[0];
+                        var edgeLat = coordinates[3];
+                        var edgeLng = coordinates[2];
+                        var radius = map.distance([centerLat, centerLng], [edgeLat, edgeLng]);
+                        
+                        layer = L.circle([centerLat, centerLng], {
+                            color: color,
+                            fillColor: color,
+                            fillOpacity: 0.3,
+                            radius: radius,
+                            weight: 3
+                        });
+                    }
+                    break;
             }
-        } else if (markers.length > 0) {
-            var group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds());
+
+            if (layer) {
+                layer.bindPopup(popup);
+                layer.addTo(map);
+                entityLayers.push(layer);
+                
+                // Store entity reference for interaction
+                layer.entityId = entity.entityId;
+                layer.entityType = entity.entityType;
+                
+                // Add hover effects
+                layer.on('mouseover', function(e) {
+                    this.setStyle({
+                        weight: this.entityType === 'POINT' ? 4 : 5,
+                        fillOpacity: this.entityType === 'POINT' ? 1 : 0.5
+                    });
+                });
+                
+                layer.on('mouseout', function(e) {
+                    this.setStyle({
+                        weight: this.entityType === 'POINT' ? 2 : 3,
+                        fillOpacity: this.entityType === 'POINT' ? 1 : 0.3
+                    });
+                });
+            }
+        }
+
+        function parseOracleGeometry(geometryString) {
+            if (!geometryString) return null;
+            
+            // Extract coordinates from Oracle SDO_GEOMETRY
+            var ordinateMatch = geometryString.match(/SDO_ORDINATE_ARRAY\(([-\d.,\s]+)\)/);
+            var pointMatch = geometryString.match(/SDO_POINT_TYPE\(([-\d.,\s]+)\)/);
+            
+            if (pointMatch) {
+                // Handle SDO_POINT_TYPE
+                var coords = pointMatch[1].split(',').map(x => parseFloat(x.trim()));
+                return coords.filter(x => !isNaN(x));
+            } else if (ordinateMatch) {
+                // Handle SDO_ORDINATE_ARRAY
+                var coords = ordinateMatch[1].split(',').map(x => parseFloat(x.trim()));
+                return coords.filter(x => !isNaN(x));
+            }
+            
+            return null;
+        }
+
+        function getDefaultColor(entityType) {
+            switch(entityType) {
+                case 'POINT': return '#0d6efd';
+                case 'POLYGON': return '#198754';
+                case 'LINESTRING': return '#ffc107';
+                case 'CIRCLE': return '#0dcaf0';
+                case 'RECTANGLE': return '#6f42c1';
+                default: return '#6c757d';
+            }
+        }
+
+        // Fit map to show all entities
+        if (entityLayers.length > 0 || markers.length > 0) {
+            var allLayers = [...entityLayers, ...markers];
+            if (allLayers.length > 0) {
+                var group = new L.featureGroup(allLayers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Add legend to the map
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <h6 style="margin-bottom: 10px; font-weight: bold;">Spatial Entity Types</h6>
+                <div class="legend-item">
+                    <div class="legend-symbol point" style="background-color: #0d6efd;"></div>
+                    <span>Points</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol line" style="background-color: #ffc107;"></div>
+                    <span>Lines</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background-color: #198754;"></div>
+                    <span>Polygons</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background-color: #0dcaf0; border-radius: 50%;"></div>
+                    <span>Circles</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background-color: #6f42c1;"></div>
+                    <span>Rectangles</span>
+                </div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        // Spatial entity management functions
+        function editEntity(entityId) {
+            if (!entityId || entityId === 'undefined') {
+                console.error('Invalid entity ID:', entityId);
+                return;
+            }
+            
+            // Fetch entity data and populate edit modal
+            fetch(`/map/entities/${entityId}`)
+                .then(response => response.json())
+                .then(entity => {
+                    document.getElementById('editEntityId').value = entity.entityId;
+                    document.getElementById('editEntityName').value = entity.name;
+                    document.getElementById('editEntityType').value = entity.entityType;
+                    document.getElementById('editEntityDescription').value = entity.description || '';
+                    document.getElementById('editEntityColor').value = entity.color || '#3388ff';
+                    new bootstrap.Modal(document.getElementById('editEntityModal')).show();
+                })
+                .catch(error => console.error('Error fetching entity:', error));
+        }
+
+        function deleteEntity(entityId) {
+            if (!entityId || entityId === 'undefined') {
+                console.error('Invalid entity ID:', entityId);
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this entity?')) {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                headers[getCsrfHeader()] = getCsrfToken();
+                
+                fetch(`/map/entities/${entityId}`, {
+                    method: 'DELETE',
+                    headers: headers
+                })
+                .then(response => {
+                    if (response.ok) {
+                        refreshEntities(); // Use refresh instead of reload
+                    } else {
+                        alert('Error deleting entity');
+                    }
+                })
+                .catch(error => console.error('Error deleting entity:', error));
+            }
+        }
+
+        function saveNewEntity() {
+            const formData = {
+                name: document.getElementById('entityName').value,
+                entityType: document.getElementById('entityType').value,
+                description: document.getElementById('entityDescription').value,
+                color: document.getElementById('entityColor').value,
+                geometry: generateGeometry()
+            };
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            headers[getCsrfHeader()] = getCsrfToken();
+
+            fetch('/map/entities', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else if (response.status === 403 || response.status === 401) {
+                    throw new Error('Authentication required. Please log in and try again.');
+                } else {
+                    return response.text().then(text => {
+                        // Check if the response is HTML (login page)
+                        if (text.includes('<!DOCTYPE')) {
+                            throw new Error('Authentication required. Please log in and try again.');
+                        }
+                        throw new Error(`Server error (${response.status}): ${text}`);
+                    });
+                }
+            })
+            .then(data => {
+                if (data.entityId) {
+                    bootstrap.Modal.getInstance(document.getElementById('createEntityModal')).hide();
+                    refreshEntities(); // Use refresh instead of reload
+                } else {
+                    alert('Error creating entity: ' + JSON.stringify(data));
+                }
+            })
+            .catch(error => {
+                console.error('Error creating entity:', error);
+                alert('Error creating entity: ' + error.message);
+            });
+        }
+
+        function updateEntity() {
+            const entityId = document.getElementById('editEntityId').value;
+            const formData = {
+                name: document.getElementById('editEntityName').value,
+                entityType: document.getElementById('editEntityType').value,
+                description: document.getElementById('editEntityDescription').value,
+                color: document.getElementById('editEntityColor').value
+            };
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            headers[getCsrfHeader()] = getCsrfToken();
+
+            fetch(`/map/entities/${entityId}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text);
+                    });
+                }
+            })
+            .then(data => {
+                if (data.entityId) {
+                    bootstrap.Modal.getInstance(document.getElementById('editEntityModal')).hide();
+                    refreshEntities(); // Use refresh instead of reload
+                } else {
+                    alert('Error updating entity: ' + JSON.stringify(data));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating entity:', error);
+                alert('Error updating entity: ' + error.message);
+            });
+        }
+
+        function generateGeometry() {
+            // Get map center as default location
+            var center = map.getCenter();
+            var lat = center.lat;
+            var lng = center.lng;
+            
+            const type = document.getElementById('entityType').value;
+
+            switch(type) {
+                case 'POINT':
+                    return `SDO_GEOMETRY(2001, 8307, SDO_POINT_TYPE(${lng}, ${lat}, NULL), NULL, NULL)`;
+                    
+                case 'POLYGON':
+                    const offset = 0.01;
+                    return `SDO_GEOMETRY(2003, 8307, NULL, SDO_ELEM_INFO_ARRAY(1,1003,1), SDO_ORDINATE_ARRAY(${lng-offset}, ${lat-offset}, ${lng+offset}, ${lat-offset}, ${lng+offset}, ${lat+offset}, ${lng-offset}, ${lat+offset}, ${lng-offset}, ${lat-offset}))`;
+                    
+                case 'LINESTRING':
+                    return `SDO_GEOMETRY(2002, 8307, NULL, SDO_ELEM_INFO_ARRAY(1,2,1), SDO_ORDINATE_ARRAY(${lng}, ${lat}, ${lng+0.01}, ${lat+0.01}))`;
+                    
+                case 'CIRCLE':
+                    return `SDO_GEOMETRY(2003, 8307, NULL, SDO_ELEM_INFO_ARRAY(1,1003,4), SDO_ORDINATE_ARRAY(${lng}, ${lat}, ${lng+0.01}, ${lat+0.01}, ${lng-0.01}, ${lat+0.01}))`;
+                    
+                case 'RECTANGLE':
+                    return `SDO_GEOMETRY(2003, 8307, NULL, SDO_ELEM_INFO_ARRAY(1,1003,3), SDO_ORDINATE_ARRAY(${lng-0.005}, ${lat-0.005}, ${lng+0.005}, ${lat+0.005}))`;
+                    
+                default:
+                    return null;
+            }
+        }
+
+        // Add click handler for interactive entity creation
+        var creatingEntity = false;
+        var tempMarker = null;
+        
+        function startEntityCreation() {
+            creatingEntity = true;
+            map.getContainer().style.cursor = 'crosshair';
+            
+            // Show instruction
+            var instruction = L.popup()
+                .setLatLng(map.getCenter())
+                .setContent('Click on the map to place the entity')
+                .openOn(map);
+                
+            setTimeout(() => map.closePopup(instruction), 3000);
+        }
+        
+        map.on('click', function(e) {
+            if (creatingEntity) {
+                // Remove previous temp marker
+                if (tempMarker) {
+                    map.removeLayer(tempMarker);
+                }
+                
+                // Add temporary marker
+                tempMarker = L.marker(e.latlng).addTo(map);
+                
+                // Update coordinates in the form (if modal is open)
+                window.selectedCoordinates = [e.latlng.lat, e.latlng.lng];
+                
+                creatingEntity = false;
+                map.getContainer().style.cursor = '';
+            }
+        });
+
+        // Refresh entities function for after creation/update
+        function refreshEntities() {
+            // Clear existing entity layers
+            entityLayers.forEach(layer => map.removeLayer(layer));
+            entityLayers = [];
+            
+            // Fetch updated entities
+            fetch('/map/entities')
+                .then(response => response.json())
+                .then(entities => {
+                    entities.forEach(entity => displaySpatialEntity(entity));
+                    
+                    // Fit map if needed
+                    if (entityLayers.length > 0) {
+                        var group = new L.featureGroup(entityLayers);
+                        map.fitBounds(group.getBounds().pad(0.1));
+                    }
+                })
+                .catch(error => console.error('Error refreshing entities:', error));
+        }
+
+        // Fix database triggers
+        function fixTriggers() {
+            const btn = document.getElementById('fixTriggersBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fixing...';
+            
+            fetch('/map/fix-triggers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let message = '✅ ' + data.message;
+                    if (data.details && data.details.length > 0) {
+                        message += '\n\nDetails:\n' + data.details.join('\n');
+                    }
+                    alert(message);
+                    btn.className = 'btn btn-success btn-sm ms-2';
+                    btn.innerHTML = '<i class="fas fa-check"></i> Fixed';
+                    
+                    // Auto-refresh the page after successful fix
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    let errorMessage = '❌ ' + data.message;
+                    if (data.error) {
+                        errorMessage += '\n\nError: ' + data.error;
+                    }
+                    alert(errorMessage);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-tools"></i> Fix DB';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Failed to fix triggers. Check console for details.\n\nError: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-tools"></i> Fix DB';
+            });
         }
     </script>
+
+    <!-- Create Entity Modal -->
+    <div class="modal fade" id="createEntityModal" tabindex="-1" aria-labelledby="createEntityModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createEntityModalLabel">Create Spatial Entity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createEntityForm">
+                        <div class="mb-3">
+                            <label for="entityName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="entityName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="entityType" class="form-label">Type</label>
+                            <select class="form-select" id="entityType" required>
+                                <option value="POINT">Point</option>
+                                <option value="LINESTRING">Line String</option>
+                                <option value="POLYGON">Polygon</option>
+                                <option value="CIRCLE">Circle</option>
+                                <option value="RECTANGLE">Rectangle</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="entityDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="entityDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="entityColor" class="form-label">Color</label>
+                            <input type="color" class="form-control form-control-color" id="entityColor" value="#3388ff">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Location</label>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="startEntityCreation()">
+                                <i class="fas fa-map-marker-alt"></i> Click on Map to Place
+                            </button>
+                            <small class="text-muted d-block">Click the button above, then click on the map where you want to place the entity.</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewEntity()">Create Entity</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Entity Modal -->
+    <div class="modal fade" id="editEntityModal" tabindex="-1" aria-labelledby="editEntityModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editEntityModalLabel">Edit Spatial Entity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEntityForm">
+                        <input type="hidden" id="editEntityId">
+                        <div class="mb-3">
+                            <label for="editEntityName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="editEntityName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEntityType" class="form-label">Type</label>
+                            <select class="form-select" id="editEntityType" required>
+                                <option value="POINT">Point</option>
+                                <option value="LINESTRING">Line String</option>
+                                <option value="POLYGON">Polygon</option>
+                                <option value="CIRCLE">Circle</option>
+                                <option value="RECTANGLE">Rectangle</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEntityDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editEntityDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEntityColor" class="form-label">Color</label>
+                            <input type="color" class="form-control form-control-color" id="editEntityColor">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateEntity()">Update Entity</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
