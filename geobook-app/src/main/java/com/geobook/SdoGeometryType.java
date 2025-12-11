@@ -3,17 +3,23 @@ package com.geobook;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
 import oracle.sql.STRUCT;
+import oracle.jdbc.OraclePreparedStatement;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SdoGeometryType implements UserType<String> {
 
+    private static final Logger logger = LoggerFactory.getLogger(SdoGeometryType.class);
+
     @Override
     public int getSqlType() {
-        return java.sql.Types.STRUCT;
+        return Types.STRUCT;  // Types.STRUCT for Oracle SDO_GEOMETRY
     }
 
     @Override
@@ -52,10 +58,14 @@ public class SdoGeometryType implements UserType<String> {
     @Override
     public void nullSafeSet(PreparedStatement st, String value, int index, SharedSessionContractImplementor session) throws SQLException {
         if (value == null) {
-            st.setNull(index, getSqlType());
+            logger.debug("Setting spatial_data to null");
+            st.setNull(index, getSqlType(), "MDSYS.SDO_GEOMETRY");
         } else {
+            logger.debug("Converting WKT to STRUCT: {}", value);
             Connection conn = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection();
-            PreparedStatement ps = conn.prepareStatement("SELECT SDO_UTIL.FROM_WKTGEOMETRY(?) FROM DUAL");
+            
+            // First create SDO_GEOMETRY from WKT, then set SRID
+            PreparedStatement ps = conn.prepareStatement("SELECT SDO_CS.TRANSFORM(SDO_UTIL.FROM_WKTGEOMETRY(?), 8307) FROM DUAL");
             ps.setString(1, value);
             ResultSet rs = ps.executeQuery();
             STRUCT struct = null;
@@ -64,7 +74,8 @@ public class SdoGeometryType implements UserType<String> {
             }
             rs.close();
             ps.close();
-            st.setObject(index, struct);
+            logger.debug("STRUCT created: {}", struct != null);
+            ((OraclePreparedStatement) st).setSTRUCT(index, (oracle.sql.STRUCT) struct);
         }
     }
 

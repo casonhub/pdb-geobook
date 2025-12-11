@@ -22,7 +22,7 @@ public class SpatialEntity {
     private SpatialEntityType entityType;
 
     @Column(name = "geometry")
-    private String geometry; // Flexible geometry storage - works with both VARCHAR2 and SDO_GEOMETRY
+    private String geometry; 
 
     @Column(name = "description")
     private String description;

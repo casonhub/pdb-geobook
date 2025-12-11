@@ -9,7 +9,7 @@ import java.util.List;
 public interface LocationRepository extends JpaRepository<Location, Long> {
     // Oracle Spatial query using SDO_WITHIN_DISTANCE
     @Query(value = "SELECT * FROM locations WHERE spatial_data IS NOT NULL AND " +
-                   "SDO_WITHIN_DISTANCE(spatial_data, MDSYS.SDO_GEOMETRY(2001, 8307, MDSYS.SDO_POINT_TYPE(?2, ?1, NULL), NULL, NULL), 'distance=' || ?3 || ' unit=KM') = 'TRUE'", nativeQuery = true)
+                   "SDO_WITHIN_DISTANCE(spatial_data, MDSYS.SDO_GEOMETRY(2001, 4326, MDSYS.SDO_POINT_TYPE(?2, ?1, NULL), NULL, NULL), 'distance=' || ?3 || ' unit=KM') = 'TRUE'", nativeQuery = true)
     List<Location> findLocationsWithinDistance(double lat, double lng, double distanceKm);
     
     // Fallback query using mathematical calculation

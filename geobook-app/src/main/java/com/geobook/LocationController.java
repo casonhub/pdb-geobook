@@ -22,6 +22,8 @@ public class LocationController {
     @Autowired
     private SpatialService spatialService;
 
+    private static final Logger logger = LoggerFactory.getLogger(LocationController.class);
+
     @GetMapping
     public String listLocations(Model model) {
         List<Location> locations = locationRepository.findAll();
@@ -38,14 +40,23 @@ public class LocationController {
 
     @PostMapping
     public String createLocation(@ModelAttribute Location location) {
-        // Save location first to get ID
+        logger.info("Creating location: {}", location);
+        
+        // Save location without spatial data first
         Location savedLocation = locationRepository.save(location);
+        logger.info("Saved location: {}", savedLocation);
         
         // Update spatial data if coordinates are provided
         if (location.getLatitude() != null && location.getLongitude() != null) {
-            String spatialData = spatialService.createSpatialData(location.getLatitude(), location.getLongitude());
-            savedLocation.setSpatialData(spatialData);
-            locationRepository.save(savedLocation);
+            logger.info("Creating spatial data for lat: {}, lng: {}", location.getLatitude(), location.getLongitude());
+            try {
+                spatialService.updateLocationSpatialData(savedLocation.getLocationId(), 
+                                                        location.getLatitude(), location.getLongitude());
+                logger.info("Updated location with spatial data");
+            } catch (Exception e) {
+                logger.error("Failed to update spatial data", e);
+                // Continue without spatial data
+            }
         }
         
         return "redirect:/locations";
@@ -62,11 +73,18 @@ public class LocationController {
     @PostMapping("/{id}")
     public String updateLocation(@PathVariable Long id, @ModelAttribute Location location) {
         location.setLocationId(id);
+        
+        // Save location without spatial data first
         Location savedLocation = locationRepository.save(location);
         
         // Update spatial data if coordinates are provided
         if (location.getLatitude() != null && location.getLongitude() != null) {
-            spatialService.updateLocationSpatialData(id, location.getLatitude(), location.getLongitude());
+            try {
+                spatialService.updateLocationSpatialData(id, location.getLatitude(), location.getLongitude());
+            } catch (Exception e) {
+                logger.error("Failed to update spatial data for location {}", id, e);
+                // Continue without spatial data
+            }
         }
         
         return "redirect:/locations";

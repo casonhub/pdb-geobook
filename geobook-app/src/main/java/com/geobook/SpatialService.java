@@ -2,6 +2,8 @@ package com.geobook;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -11,6 +13,8 @@ import java.sql.SQLException;
 
 @Service
 public class SpatialService {
+
+    private static final Logger logger = LoggerFactory.getLogger(SpatialService.class);
 
     @Autowired
     private DataSource dataSource;
@@ -29,13 +33,17 @@ public class SpatialService {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("wkt");
+                    String wkt = rs.getString("wkt");
+                    logger.debug("Created WKT: {}", wkt);
+                    return wkt;
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Error creating spatial data", e);
             // Fallback to simple WKT format
-            return String.format("POINT(%f %f)", longitude, latitude);
+            String fallback = String.format("POINT(%f %f)", longitude, latitude);
+            logger.debug("Using fallback WKT: {}", fallback);
+            return fallback;
         }
         return null;
     }

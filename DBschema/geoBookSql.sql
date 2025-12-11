@@ -187,22 +187,23 @@ END;
 /
 
 -- Multimedia  trigger for storing image
-CREATE OR REPLACE TRIGGER multimedia_generateFeatures
-  BEFORE INSERT OR UPDATE OF image ON multimedia
-    FOR EACH ROW
-DECLARE
-si ORDSYS.SI_StillImage;
-BEGIN
-  IF :NEW.image IS NOT NULL AND :NEW.image.height IS NOT NULL THEN
-    si := ORDSYS.SI_StillImage(:NEW.image.getContent());
-    :NEW.image_si := si;
-    :NEW.image_ac := ORDSYS.SI_AverageColor(si);
-    :NEW.image_ch := ORDSYS.SI_ColorHistogram(si);
-    :NEW.image_pc := ORDSYS.SI_PositionalColor(si);
-    :NEW.image_tx := ORDSYS.SI_Texture(si);
-END IF;
-END multimedia_generate Features;
-/
+-- Commented out because ORDImage handling is done in application code
+-- CREATE OR REPLACE TRIGGER multimedia_generateFeatures
+--   BEFORE INSERT OR UPDATE OF image ON multimedia
+--     FOR EACH ROW
+-- DECLARE
+-- si ORDSYS.SI_StillImage;
+-- BEGIN
+--   IF :NEW.image IS NOT NULL AND :NEW.image.height IS NOT NULL THEN
+--     si := ORDSYS.SI_StillImage(:NEW.image.getContent());
+--     :NEW.image_si := si;
+--     :NEW.image_ac := ORDSYS.SI_AverageColor(si);
+--     :NEW.image_ch := ORDSYS.SI_ColorHistogram(si);
+--     :NEW.image_pc := ORDSYS.SI_PositionalColor(si);
+--     :NEW.image_tx := ORDSYS.SI_Texture(si);
+-- END IF;
+-- END multimedia_generateFeatures;
+-- /
 
 -- Spatial entities sequence and triggers
 CREATE SEQUENCE spatial_entities_seq START WITH 1 INCREMENT BY 1;
@@ -245,6 +246,16 @@ CREATE INDEX idx_users_username ON users(username);
 -- Status and type filters
 CREATE INDEX idx_multimedia_type_active ON multimedia(file_type, is_active);
 CREATE INDEX idx_spatial_entities_type ON spatial_entities(entity_type);
+
+-- Spatial metadata and index for locations table
+INSERT INTO user_sdo_geom_metadata (table_name, column_name, diminfo, srid)
+VALUES ('LOCATIONS', 'SPATIAL_DATA',
+  MDSYS.SDO_DIM_ARRAY(
+    MDSYS.SDO_DIM_ELEMENT('LONG', -180, 180, 0.5),
+    MDSYS.SDO_DIM_ELEMENT('LAT', -90, 90, 0.5)
+  ), 8307);
+
+CREATE INDEX LOCATIONS_SDO_IDX ON LOCATIONS(SPATIAL_DATA) INDEXTYPE IS MDSYS.SPATIAL_INDEX;
 
 
 PROMPT Inserting sample data for testing...
